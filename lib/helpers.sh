@@ -83,6 +83,36 @@ is_traefik_active() {
 # Funktion für den Menükopf
 print_header() {
     local title=$1
-    local version="3.0 (Modular)"
-    clear; echo ""; echo -e "${BLUE}+-----------------------------------------+${NC}"; echo -e "${BLUE}|${NC} ${BOLD}${title}${NC} ${BLUE}|${NC}"; echo -e "${BLUE}|${NC} Version: ${version}    Author: fbnlrz    ${BLUE}|${NC}"; echo -e "${BLUE}|${NC} Based on guide by: phoenyx          ${BLUE}|${NC}"; echo -e "${BLUE}+-----------------------------------------+${NC}"; echo -e "| Current Time: $(date '+%Y-%m-%d %H:%M:%S %Z')    |"; printf "| Traefik Status: %-23s |\n" "${BOLD}$(is_traefik_active && echo "${GREEN}ACTIVE  ${NC}" || echo "${RED}INACTIVE${NC}")${NC}"; echo "+-----------------------------------------+";
+    # Der Pfad zum Skript, aus dem gelesen wird (das CLI-Skript selbst).
+    # Die Variable SCRIPT_DIR wird im Hauptskript `traefik-manager.sh` definiert
+    # und ist hier verfügbar, da diese Datei von dort gesourcet wird.
+    local main_script_path="${SCRIPT_DIR}/traefik-manager.sh"
+
+    # Extrahieren der Informationen mit `grep` und `sed` für Robustheit.
+    # `sed 's/^[^:]*: //'` entfernt alles bis zum ersten Doppelpunkt und dem darauf folgenden Leerzeichen.
+    local version=$(grep "^# Version:" "$main_script_path" | sed 's/^[^:]*: //')
+    local author=$(grep "^# Author:" "$main_script_path" | sed 's/^[^:]*: //')
+    local based_on=$(grep "^# Based on:" "$main_script_path" | sed 's/^[^:]*: //')
+
+    # Fallback-Werte, falls grep nichts findet oder die Datei nicht existiert.
+    version=${version:-"N/A"}
+    author=${author:-"N/A"}
+    based_on=${based_on:-"N/A"}
+
+    # Header-Ausgabe
+    clear; echo ""
+    echo -e "${BLUE}+-----------------------------------------+${NC}"
+    # Titel des aktuellen Menüs, zentriert und fett.
+    printf "${BLUE}| %-38s|${NC}\n" "${BOLD}${title}${NC}"
+    echo -e "${BLUE}+-----------------------------------------+${NC}"
+    # Dynamisch generierte Informationen, formatiert für die Box.
+    printf "${BLUE}| Version: %-29s |${NC}\n" "$version"
+    printf "${BLUE}| Author: %-30s |${NC}\n" "$author"
+    # Kürzen, falls die "Based on"-Zeile zu lang ist, damit der Rahmen nicht bricht.
+    printf "${BLUE}| Based on: %-28.28s |${NC}\n" "$based_on"
+    echo -e "${BLUE}+-----------------------------------------+${NC}"
+    # Status-Informationen
+    echo -e "| Current Time: $(date '+%Y-%m-%d %H:%M:%S %Z')    |"
+    printf "| Traefik Status: %-23s |\n" "${BOLD}$(is_traefik_active && echo "${GREEN}ACTIVE  ${NC}" || echo "${RED}INACTIVE${NC}")${NC}"
+    echo "+-----------------------------------------+";
 }
