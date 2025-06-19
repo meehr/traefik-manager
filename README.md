@@ -1,49 +1,46 @@
 # Traefik Manager - Umfassende Anleitung
 
 ## Inhaltsverzeichnis
-
 - [Traefik Manager - Umfassende Anleitung](#traefik-manager---umfassende-anleitung)
   - [Inhaltsverzeichnis](#inhaltsverzeichnis)
-  - [Einführung](#einführung)
-  - [Verzeichnisstruktur](#verzeichnisstruktur)
-  - [Installation \& Ersteinrichtung](#installation--ersteinrichtung)
-    - [Voraussetzungen](#voraussetzungen)
-    - [Einrichtung](#einrichtung)
-  - [Nutzung der Grafischen Oberfläche (GUI)](#nutzung-der-grafischen-oberfläche-gui)
-    - [Starten der GUI](#starten-der-gui)
-    - [Navigation](#navigation)
-    - [Menü-Übersicht](#menü-übersicht)
-  - [Nutzung der Kommandozeilen-Oberfläche (CLI)](#nutzung-der-kommandozeilen-oberfläche-cli)
-  - [Automatisierung (Cronjob / Timer)](#automatisierung-cronjob--timer)
-  - [Konfiguration anpassen](#konfiguration-anpassen)
-  - [Das Skript erweitern](#das-skript-erweitern)
-    - [Menüpunkt in der GUI-Hilfsdatei hinzufügen:](#menüpunkt-in-der-gui-hilfsdatei-hinzufügen)
-    - [Logik im Hauptskript verbinden:](#logik-im-hauptskript-verbinden)
-  - [Fehlerbehebung](#fehlerbehebung)
+    - [1. Einführung](#1-einführung)
+    - [2. Verzeichnisstruktur](#2-verzeichnisstruktur)
+    - [3. Installation \& Ersteinrichtung](#3-installation--ersteinrichtung)
+      - [Voraussetzungen](#voraussetzungen)
+      - [Einrichtung](#einrichtung)
+    - [4. Nutzung des Skripts](#4-nutzung-des-skripts)
+      - [Starten der Grafischen Oberfläche (GUI)](#starten-der-grafischen-oberfläche-gui)
+      - [Starten des interaktiven CLI-Menüs](#starten-des-interaktiven-cli-menüs)
+      - [Direkte Befehlsausführung (CLI)](#direkte-befehlsausführung-cli)
+    - [5. Automatisierung (Cronjob / Timer)](#5-automatisierung-cronjob--timer)
+    - [6. Konfiguration anpassen](#6-konfiguration-anpassen)
+    - [7. Das Skript erweitern](#7-das-skript-erweitern)
+    - [8. Fehlerbehebung](#8-fehlerbehebung)
 
-## Einführung
+---
+
+### 1. Einführung
 
 Der Traefik Manager ist eine Sammlung von Bash-Skripten, die entwickelt wurden, um die Verwaltung einer Traefik v3 Instanz auf einem Debian-basierten System zu vereinfachen. Das Skript bietet eine umfassende Lösung für Installation, Konfiguration, Dienstverwaltung, Backup, Automatisierung und Wartung.
 
-Es gibt zwei Möglichkeiten, das Skript zu bedienen:
+Es wird über ein einziges Hauptskript, `traefik-manager.sh`, bedient, das drei verschiedene Ausführungsmodi unterstützt:
+* **Grafische Benutzeroberfläche (GUI):** Eine benutzerfreundliche, menügeführte Oberfläche, die auf dem Tool `dialog` basiert. Dies ist die empfohlene Methode für die interaktive Nutzung.
+* **Interaktives Kommandozeilen-Interface (CLI):** Eine klassische, auf Zahleneingaben basierende Menüführung für Umgebungen ohne GUI.
+* **Direkte Befehlsausführung:** Für die Automatisierung und schnelle, gezielte Aktionen können Funktionen direkt als Kommandozeilen-Argumente aufgerufen werden.
 
-Grafische Benutzeroberfläche (GUI): Eine benutzerfreundliche, menügeführte Oberfläche, die auf dem Tool dialog basiert. Sie wird für die tägliche Nutzung empfohlen.
-
-Kommandozeilen-Interface (CLI): Eine klassische, auf Zahleneingaben basierende Menüführung.
-
-## Verzeichnisstruktur
+### 2. Verzeichnisstruktur
 
 Das Projekt ist modular aufgebaut, um die Wartung und Erweiterbarkeit zu erleichtern.
 
-```bash
+```
 traefik-manager/
-├── traefik-manager-gui.sh    # HAUPTSKRIPT: Startet die grafische Oberfläche
-├── traefik-manager.sh        # Startet die klassische Kommandozeilen-Oberfläche
+├── traefik-manager.sh        # DAS EINZIGE HAUPTSKRIPT: Steuert alle Modi
 |
 ├── conf/
 │   └── traefik-manager.conf  # Zentrale Konfigurationsdatei mit allen Pfaden & Variablen
 |
 ├── lib/
+│   ├── cli_handler.sh        # Verarbeitet alle direkten Kommandozeilen-Argumente
 │   ├── gui_helpers.sh        # Definiert das Aussehen aller GUI-Menüs
 │   ├── helpers.sh            # Allgemeine Hilfsfunktionen (z.B. Farbausgabe)
 │   └── dependencies.sh       # Funktionen zur Überprüfung von Abhängigkeiten
@@ -59,149 +56,121 @@ traefik-manager/
     └── maintenance.sh        # Update-Prüfung und Aktualisierung
 ```
 
-## Installation & Ersteinrichtung
+### 3. Installation & Ersteinrichtung
 
-### Voraussetzungen
+#### Voraussetzungen
 
-Stellen Sie sicher, dass die folgenden Pakete auf Ihrem System installiert sind. Das Skript wird versuchen, fehlende Pakete bei der ersten Ausführung nachzuinstallieren, aber eine manuelle Installation im Voraus kann nicht schaden.
+Stellen Sie sicher, dass die folgenden Pakete auf Ihrem System installiert sind. Das Skript wird versuchen, fehlende Pakete bei der ersten Ausführung nachzuinstallieren.
 
 ```bash
 sudo apt update
 sudo apt install dialog curl jq apache2-utils netcat-openbsd openssl yamllint
 ```
 
-dialog: Wird für die GUI-Version zwingend benötigt.
+* `dialog`: Wird für die GUI-Version zwingend benötigt.
 
-### Einrichtung
+#### Einrichtung
 
-Klonen oder Herunterladen: Laden Sie das gesamte traefik-manager-Verzeichnis auf Ihr System, z.B. in das Home-Verzeichnis Ihres Benutzers.
+1. **Klonen oder Herunterladen:** Laden Sie das gesamte `traefik-manager`-Verzeichnis auf Ihr System.
 
-Ausführbar machen: Machen Sie die beiden Hauptskripte ausführbar:
+2. **Ausführbar machen:** Machen Sie das Hauptskript ausführbar:
 
-```bash
-cd /pfad/zum/traefik-manager
-chmod +x traefik-manager-gui.sh
-chmod +x traefik-manager.sh
-```
+   ```bash
+   cd /pfad/zum/traefik-manager
+   chmod +x traefik-manager.sh
+   ```
 
-Als root ausführen: Das Skript muss mit sudo ausgeführt werden, da es Systemdateien und -dienste verwaltet.
+3. **Als `root` ausführen:** Das Skript muss mit `sudo` ausgeführt werden, da es Systemdateien und -dienste verwaltet.
 
-```bash
-sudo ./traefik-manager-gui.sh
-```
+### 4. Nutzung des Skripts
 
-## Nutzung der Grafischen Oberfläche (GUI)
+#### Starten der Grafischen Oberfläche (GUI)
 
-Dies ist die empfohlene Methode zur Interaktion mit dem Skript.
-
-### Starten der GUI
-
-Führen Sie das Skript mit sudo aus:
+Dies ist die empfohlene Methode für die interaktive Nutzung.
 
 ```bash
-sudo ./traefik-manager-gui.sh
+sudo ./traefik-manager.sh --gui
 ```
 
-### Navigation
+* **Navigation:** Pfeiltasten, Enter zum Auswählen, Esc zum Verlassen.
 
-Pfeiltasten (Hoch/Runter): Navigation innerhalb der Menüs.
+#### Starten des interaktiven CLI-Menüs
 
-Enter: Auswählen eines Menüpunktes.
-
-Tab: Wechseln zwischen Knöpfen (z.B. "Ja"/"Nein").
-
-Esc: Aktuelles Menü/Dialogbox verlassen oder das Skript beenden.
-
-### Menü-Übersicht
-
-Die GUI leitet Sie durch alle verfügbaren Aktionen. Die meisten nicht-interaktiven Funktionen (wie z.B. "Status anzeigen") leiten ihre Ausgabe in eine temporäre Datei um und zeigen diese anschließend in einer scrollbaren Textbox an. So bleibt die Oberfläche sauber.
-
-- Installation & Initial Setup: Führt Sie durch die Erstinstallation von Traefik. Dieser Prozess ist interaktiv und findet direkt im Terminal statt.
-
-- Configuration & Routes: Hier können Sie neue Routen zu Ihren Diensten anlegen, bestehende ändern oder löschen. Sie können auch die zentralen Konfigurationsdateien direkt bearbeiten.
-
-- Security & Certificates: Verwalten Sie Benutzer für das Traefik-Dashboard, prüfen Sie Ihre Let's Encrypt-Zertifikate oder lassen Sie sich eine Beispielkonfiguration für Fail2Ban anzeigen.
-
-- Service & Logs: Starten, stoppen und starten Sie den Traefik-Dienst neu. Hier können Sie auch alle relevanten Log-Dateien live einsehen (tail -f).
-
-- Backup & Restore: Erstellen Sie ein Backup Ihres gesamten /opt/traefik-Verzeichnisses oder stellen Sie ein früheres Backup wieder her.
-
-- Diagnostics & Info: Nützliche Werkzeuge zur Fehlerbehebung, z.B. ein Health Check, Port-Prüfung oder Konnektivitätstests zu Ihren Backend-Diensten.
-
-- Automation: Richten Sie systemd-Timer ein, um z.B. tägliche Backups oder eine regelmäßige IP-Protokollierung zu automatisieren.
-
-- Maintenance & Updates: Suchen Sie nach neuen Traefik-Versionen und führen Sie das Update direkt aus dem Skript durch.
-
-- Uninstall Traefik: Entfernt Traefik und alle zugehörigen Konfigurationen, Dienste und Logs vollständig vom System. Diese Aktion kann nicht rückgängig gemacht werden!
-
-## Nutzung der Kommandozeilen-Oberfläche (CLI)
-
-Für Puristen oder in Umgebungen, in denen dialog nicht verfügbar ist, kann die klassische CLI-Version verwendet werden.
+Starten Sie das Skript ohne Argumente, um das klassische, textbasierte Menü zu erhalten.
 
 ```bash
 sudo ./traefik-manager.sh
 ```
 
-Die Navigation erfolgt durch die Eingabe der entsprechenden Ziffer und das Drücken der Enter-Taste. Die Menüstruktur und die verfügbaren Funktionen sind identisch mit der GUI-Version.
+* **Navigation:** Ziffer eingeben und mit Enter bestätigen.
 
-## Automatisierung (Cronjob / Timer)
+#### Direkte Befehlsausführung (CLI)
 
-Das Skript ist darauf ausgelegt, auch nicht-interaktiv ausgeführt zu werden. Dies ist besonders für die Backup-Funktion nützlich.
+Für Automatisierung und schnelle Aktionen. Rufen Sie `sudo ./traefik-manager.sh help` auf, um eine Liste aller Befehle zu sehen.
 
-Automatisches Backup: Die empfohlene Methode ist die Einrichtung über das Menü 7 (Automation). Dies erstellt einen systemd-Timer, der die Backup-Funktion täglich aufruft.
-
-Manuelle Einrichtung (z.B. Cronjob): Sie können die Backup-Funktion auch manuell über einen Cronjob aufrufen.
+**Beispiele:**
 
 ```bash
-# Führt jeden Tag um 3:00 Uhr nachts ein Backup durch.
-0 3 * * * /usr/bin/sudo /pfad/zum/traefik-manager/traefik-manager.sh --run-backup >> /var/log/traefik_autobackup.log 2>&1
+# Startet den Traefik-Dienst
+sudo ./traefik-manager.sh start
+
+# Erstellt ein Backup (nicht-interaktiv)
+sudo ./traefik-manager.sh backup
+
+# Zeigt das Access-Log live an
+sudo ./traefik-manager.sh logs access
 ```
 
-Der Befehl hierfür lautet:
+### 5. Automatisierung (Cronjob / Timer)
 
-```bash
-/pfad/zum/traefik-manager/traefik-manager.sh --run-backup
-```
+Das Skript ist darauf ausgelegt, auch nicht-interaktiv ausgeführt zu werden.
 
-## Konfiguration anpassen
+* **Automatisches Backup:** Die empfohlene Methode ist die Einrichtung über das **Menü 7 (Automation)** in der GUI oder CLI. Dies erstellt einen `systemd`-Timer.
 
-Die zentrale Konfigurationsdatei für das Skript selbst ist conf/traefik-manager.conf. Hier können Sie globale Pfade anpassen, falls Ihre Verzeichnisstruktur von den Standardwerten abweicht.
+* **Manuelle Einrichtung (z.B. Cronjob):**
 
-## Das Skript erweitern
+  ```cron
+  # Führt jeden Tag um 3:00 Uhr nachts ein Backup durch.
+  0 3 * * * /usr/bin/sudo /pfad/zum/traefik-manager/traefik-manager.sh backup >> /var/log/traefik_autobackup.log 2>&1
+  ```
 
-Dank des modularen Aufbaus ist das Skript einfach zu erweitern. Um eine neue Funktion hinzuzufügen, folgen Sie diesen drei Schritten:
+### 6. Konfiguration anpassen
 
-Funktion im Modul erstellen:
-Schreiben Sie Ihre neue Bash-Funktion in der passenden Modul-Datei (z.B. eine neue Diagnosefunktion in modules/diagnostics.sh).
+Die zentrale Konfigurationsdatei für das Skript selbst ist `conf/traefik-manager.conf`. Hier können Sie globale Pfade anpassen.
 
-### Menüpunkt in der GUI-Hilfsdatei hinzufügen:
+### 7. Das Skript erweitern
 
-Öffnen Sie lib/gui_helpers.sh und fügen Sie einen neuen Menüeintrag in der entsprechenden show_*_menu-Funktion hinzu.
-Beispiel:
+Um eine neue Funktion als direkten CLI-Befehl und Menüpunkt hinzuzufügen:
 
-```bash
-# in show_diagnostics_menu()
-"MeineFunktion" "Eine tolle neue Diagnose" \
-```
+1. **Funktion im Modul erstellen:**
+   Schreiben Sie Ihre neue Bash-Funktion in der passenden Modul-Datei (z.B. eine neue Funktion `meine_funktion` in `modules/diagnostics.sh`).
 
-### Logik im Hauptskript verbinden:
+2. **CLI-Befehl hinzufügen:**
+   Öffnen Sie `lib/cli_handler.sh` und fügen Sie einen neuen `case` für Ihren Befehl hinzu.
+   *Beispiel:*
 
-Öffnen Sie traefik-manager-gui.sh. Suchen Sie die case-Anweisung für das entsprechende Menü und fügen Sie einen neuen Fall für Ihr neues "tag" (MeineFunktion) hinzu. Rufen Sie dort Ihre neue Funktion auf.
-Beispiel:
+   ```bash
+   # in handle_cli_args()
+   case "$cmd" in
+       # ... andere Befehle
+       meine-funktion) meine_funktion ;;
+   esac
+   ```
 
-```bash
-# in 'case "$main_menu_choice" in Diagnostics ...'
-case "$choice" in
-    # ... andere Fälle
-    MeineFunktion) run_and_show "Meine neue Diagnose" meine_neue_funktion ;;
-esac
-```
+   Aktualisieren Sie auch die `show_cli_help`-Funktion, um Ihren neuen Befehl zu dokumentieren.
 
-Die run_and_show-Funktion kümmert sich automatisch darum, die Ausgabe Ihrer Funktion in einer Textbox anzuzeigen.
+3. **GUI-Menüpunkt hinzufügen (optional):**
+   Öffnen Sie `lib/gui_helpers.sh` und fügen Sie einen Eintrag in der entsprechenden `show_*_menu`-Funktion hinzu.
 
-## Fehlerbehebung
+4. **Logik im Hauptskript verbinden (optional):**
+   Öffnen Sie `traefik-manager.sh`. Fügen Sie in den `case`-Anweisungen für die GUI (`start_gui_mode`) und CLI (`start_interactive_cli`) einen neuen Eintrag hinzu, der Ihre Funktion aufruft.
 
-- GUI wird nicht angezeigt: Stellen Sie sicher, dass das Paket dialog installiert ist.
-- Funktionen schlagen fehl: Führen Sie das Skript immer mit sudo aus.
-- Letzte Ausgabe prüfen: Das Skript leitet die Ausgabe der meisten Aktionen in eine temporäre Datei /tmp/traefik_manager.log um. Wenn ein Dialog zu schnell verschwindet, können Sie den Inhalt dieser Datei überprüfen, um die letzte Ausgabe zu sehen.
-- Pfade kontrollieren: Stellen Sie sicher, dass die Pfade in conf/traefik-manager.conf mit Ihrer Systemkonfiguration übereinstimmen.
+### 8. Fehlerbehebung
+
+* **GUI wird nicht angezeigt:** Stellen Sie sicher, dass das Paket `dialog` installiert ist.
+
+* **Funktionen schlagen fehl:** Führen Sie das Skript immer mit `sudo` aus.
+
+* **Letzte Ausgabe prüfen (GUI):** Die Ausgabe der meisten Aktionen wird in `/tmp/traefik_manager.log` gespeichert. Wenn ein Dialog zu schnell verschwindet, können Sie diese Datei prüfen.
+
+* **Pfade kontrollieren:** Stellen Sie sicher, dass die Pfade in `conf/traefik-manager.conf` korrekt sind.
