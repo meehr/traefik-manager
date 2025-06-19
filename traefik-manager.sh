@@ -2,6 +2,15 @@
 # ===============================================================================
 # Traefik Management Script - Main Controller
 # Version: 3.0 (Modular)
+# Author: Martin Ehrentraut
+# Unterstützt von: fbnlrz, Traefik Team, AI Assistants
+# Based on: Traefik Manager from fbnlrz (Thanks for the inspiration!)
+# Date: 2025-06-19
+#
+# DOKUMENTATION:
+# Dieses Skript dient als Haupt-Controller für die Traefik Management Anwendung.
+# Installation, Konfiguration und Verwaltung von Traefik werden hier zentral gesteuert.
+# IP-Logging, Autobackup und weitere Funktionen sind modular aufgebaut. (Without Git functions)
 # ===============================================================================
 
 # --- Pfad zum Skriptverzeichnis ermitteln ---

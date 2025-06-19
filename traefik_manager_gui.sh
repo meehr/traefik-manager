@@ -2,6 +2,12 @@
 # ===============================================================================
 # Traefik Management Script - Vollständige GUI-Version
 # Version: 4.1 (Full GUI)
+# ===============================================================================
+# Author: Martin Ehrentraut
+# Unterstützt von: fbnlrz, Traefik Team, AI Assistants
+# Based on: Traefik Manager from fbnlrz (Thanks for the inspiration!)
+# Date: 2025-06-19
+# ===============================================================================
 #
 # DOKUMENTATION:
 # Dieses Skript dient als Haupt-Controller für die GUI-Anwendung.
