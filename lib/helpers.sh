@@ -17,26 +17,10 @@ if [ -t 1 ] && command -v tput &> /dev/null; then
         BOLD=$(tput bold)
         NC=$(tput sgr0)
     else
-        RED=""
-        GREEN=""
-        YELLOW=""
-        BLUE=""
-        MAGENTA=""
-        CYAN=""
-        WHITE=""
-        BOLD=""
-        NC=""
+        RED=""; GREEN=""; YELLOW=""; BLUE=""; MAGENTA=""; CYAN=""; WHITE=""; BOLD=""; NC="";
     fi
 else
-    RED=""
-    GREEN=""
-    YELLOW=""
-    BLUE=""
-    MAGENTA=""
-    CYAN=""
-    WHITE=""
-    BOLD=""
-    NC=""
+    RED=""; GREEN=""; YELLOW=""; BLUE=""; MAGENTA=""; CYAN=""; WHITE=""; BOLD=""; NC="";
 fi
 
 # --- Hilfsfunktionen ---
@@ -49,7 +33,6 @@ check_root() {
 
 ask_confirmation() {
     local prompt="$1"
-    # Nameref (-n) für sichere Variablenausgabe ohne 'eval' verwenden.
     local -n result_var="$2"
     local reply
     while true; do
@@ -80,39 +63,28 @@ is_traefik_active() {
     return $?
 }
 
-# Funktion für den Menükopf
+# Funktion für den Menükopf (NEU: Ohne Rahmen)
 print_header() {
     local title=$1
-    # Der Pfad zum Skript, aus dem gelesen wird (das CLI-Skript selbst).
-    # Die Variable SCRIPT_DIR wird im Hauptskript `traefik-manager.sh` definiert
-    # und ist hier verfügbar, da diese Datei von dort gesourcet wird.
     local main_script_path="${SCRIPT_DIR}/traefik-manager.sh"
 
-    # Extrahieren der Informationen mit `grep` und `sed` für Robustheit.
-    # `sed 's/^[^:]*: //'` entfernt alles bis zum ersten Doppelpunkt und dem darauf folgenden Leerzeichen.
+    # Extrahieren der Informationen
     local version=$(grep "^# Version:" "$main_script_path" | sed 's/^[^:]*: //')
     local author=$(grep "^# Author:" "$main_script_path" | sed 's/^[^:]*: //')
-    local based_on=$(grep "^# Based on:" "$main_script_path" | sed 's/^[^:]*: //')
-
-    # Fallback-Werte, falls grep nichts findet oder die Datei nicht existiert.
-    version=${version:-"N/A"}
-    author=${author:-"N/A"}
-    based_on=${based_on:-"N/A"}
-
+    
     # Header-Ausgabe
-    clear; echo ""
-    echo -e "${BLUE}+-----------------------------------------+${NC}"
-    # Titel des aktuellen Menüs, zentriert und fett.
-    printf "${BLUE}| %-38s|${NC}\n" "${BOLD}${title}${NC}"
-    echo -e "${BLUE}+-----------------------------------------+${NC}"
-    # Dynamisch generierte Informationen, formatiert für die Box.
-    printf "${BLUE}| Version: %-29s |${NC}\n" "$version"
-    printf "${BLUE}| Author: %-30s |${NC}\n" "$author"
-    # Kürzen, falls die "Based on"-Zeile zu lang ist, damit der Rahmen nicht bricht.
-    printf "${BLUE}| Based on: %-28.28s |${NC}\n" "$based_on"
-    echo -e "${BLUE}+-----------------------------------------+${NC}"
-    # Status-Informationen
-    echo -e "| Current Time: $(date '+%Y-%m-%d %H:%M:%S %Z')    |"
-    printf "| Traefik Status: %-23s |\n" "${BOLD}$(is_traefik_active && echo "${GREEN}ACTIVE  ${NC}" || echo "${RED}INACTIVE${NC}")${NC}"
-    echo "+-----------------------------------------+";
+    clear
+    echo -e "${BLUE}${BOLD}--- ${title} ---${NC}"
+    echo ""
+    echo -e "${CYAN}Version:${NC} $version"
+    echo -e "${CYAN}Author:${NC} $author"
+    echo -e "${CYAN}Datum:${NC} $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    
+    # Traefik Status mit Farbanzeige
+    if is_traefik_active; then
+        echo -e "${CYAN}Traefik Status:${NC} ${GREEN}ACTIVE${NC}"
+    else
+        echo -e "${CYAN}Traefik Status:${NC} ${RED}INACTIVE${NC}"
+    fi
+    echo "-----------------------------------------"
 }
