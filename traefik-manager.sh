@@ -142,7 +142,7 @@ start_gui_mode() {
     done
 }
 
-# --- Interaktiver CLI-Modus ---
+# --- Interaktiver CLI-Modus (Vollständig implementiert) ---
 start_interactive_cli() {
     while true; do
         print_header "Main Menu - Traefik Management"
@@ -161,17 +161,64 @@ start_interactive_cli() {
         echo ""
         read -p "Your choice [0-9]: " main_choice
 
-        local sub_choice=-1
+        local sub_choice=0 # Wird auf 1 gesetzt, wenn eine Aktion stattfindet, die eine Pause erfordert
         case "$main_choice" in
-            1) install_traefik; sub_choice=1 ;;
-            2) add_service; sub_choice=1 ;;
-            9) uninstall_traefik; sub_choice=1 ;;
-            0) echo "Exiting script. Goodbye!"; exit 0 ;;
-            *) echo -e "${RED}ERROR: Invalid choice '$main_choice'.${NC}" >&2 ;;
+            1) # Installation
+                clear; print_header "Installation & Initial Setup"
+                echo -e "1) Install / Overwrite Traefik"; echo "0) Back"
+                read -p "Choice: " sub_choice_val
+                if [[ "$sub_choice_val" == 1 ]]; then install_traefik; sub_choice=1; fi
+                ;;
+            2) # Config
+                clear; print_header "Configuration & Routes"
+                echo "1) Add New Service"; echo "2) Modify Service"; echo "3) Remove Service"; echo "---"; echo "4) Edit Static Config"; echo "5) Edit Middleware Config"; echo "6) Add Plugin"; echo "0) Back"
+                read -p "Choice: " sub_choice_val
+                case "$sub_choice_val" in
+                    1) add_service; sub_choice=1 ;;
+                    2) modify_service; sub_choice=1 ;;
+                    3) remove_service; sub_choice=1 ;;
+                    4) edit_static_config; sub_choice=1 ;;
+                    5) edit_middlewares_config; sub_choice=1 ;;
+                    6) install_plugin; sub_choice=1 ;;
+                esac
+                ;;
+            3) # Security
+                clear; print_header "Security & Certificates"
+                echo "1) Manage Dashboard Users"; echo "2) Show Certificate Details"; echo "3) Check Cert Expiry"; echo "4) Check for Insecure API"; echo "5) Show Fail2Ban Example"; echo "0) Back"
+                read -p "Choice: " sub_choice_val
+                case "$sub_choice_val" in
+                    1) manage_dashboard_users; sub_choice=1 ;; # Hat eigene Schleife/Pause
+                    2) show_certificate_info; sub_choice=1 ;;
+                    3) check_certificate_expiry; sub_choice=1 ;;
+                    4) check_insecure_api; sub_choice=1 ;;
+                    5) generate_fail2ban_config; sub_choice=1 ;;
+                esac
+                ;;
+            4) # Service
+                clear; print_header "Service & Logs"
+                echo "1) Start"; echo "2) Stop"; echo "3) Restart"; echo "4) Status"; echo "---"; echo "5) View Traefik Log"; echo "6) View Access Log"; echo "7) View Journal"; echo "0) Back"
+                read -p "Choice: " sub_choice_val
+                case "$sub_choice_val" in
+                    1) manage_service "start"; sub_choice=1 ;;
+                    2) manage_service "stop"; sub_choice=1 ;;
+                    3) manage_service "restart"; sub_choice=1 ;;
+                    4) manage_service "status"; sub_choice=1 ;;
+                    5) view_logs "traefik" ;; # Hat eigene Schleife
+                    6) view_logs "access" ;; # Hat eigene Schleife
+                    7) view_logs "journal" ;; # Hat eigene Schleife
+                esac
+                ;;
+            9) # Uninstall
+                uninstall_traefik; sub_choice=1 ;;
+            0)
+                echo "Exiting script. Goodbye!"; exit 0 ;;
+            *)
+                echo -e "${RED}ERROR: Invalid choice '$main_choice'.${NC}" >&2; sub_choice=1 ;;
         esac
 
+        # Nur pausieren, wenn eine Aktion stattgefunden hat.
         if [[ "$sub_choice" -ne 0 ]]; then
-             echo ""; read -p "... Press Enter for main menu ..." dummy_var
+             echo ""; read -p "... Press Enter for main menu ..."
         fi
     done
 }
