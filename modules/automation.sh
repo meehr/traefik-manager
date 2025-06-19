@@ -139,16 +139,28 @@ setup_ip_logging() {
     if ! ensure_dependency_installed "jq" "jq"; then return 1; fi
 
     local access_log_format
-    access_log_format=$(sudo awk '/^accessLog:/ {in_block=1} /^[a-zA-Z#]+:/ && !/^\s*#/ {if (in_block) in_block=0} in_block && /^\s*format:\s*json/ {print "json"; exit}' "${STATIC_CONFIG_FILE}" 2>/dev/null)
+    # CORRECTED: Robust awk command to find 'format: json' inside the 'accessLog:' block,
+    # ignoring comments and handling various spacings.
+    access_log_format=$(sudo awk '
+        /^accessLog:/ {in_block=1; next}
+        /^[a-zA-Z#]+:/ && !/^\s*#/ {if (in_block) in_block=0} # Exit block on next top-level key
+        in_block && /^\s*format:\s*json/ { # Match format line inside block, ignore comments
+            print "json";
+            exit; # Found it, stop processing
+        }
+    ' "${STATIC_CONFIG_FILE}" 2>/dev/null)
+
     if [[ "$access_log_format" != "json" ]]; then
-        echo -e "${RED}ERROR: Traefik Access Log Format is not 'json' in ${STATIC_CONFIG_FILE}!${NC}" >&2; return 1
+        echo -e "${RED}ERROR: Traefik Access Log Format is not set to 'json' in ${STATIC_CONFIG_FILE} (or could not be read)!${NC}" >&2
+        echo -e "${RED}        The IP logging script requires JSON logs. Please correct the Traefik configuration.${NC}" >&2
+        return 1
     fi
 
     local service_file="/etc/systemd/system/${IPLOGGER_SERVICE}"
     local timer_file="/etc/systemd/system/${IPLOGGER_SERVICE%.service}.timer"
     local overwrite_confirmed=false
 
-    if [[ -f "$service_file" || -f "$timer_file" ]]; then
+    if [[ -f "$service_file" || -f "$timer_file" || -f "$IPLOGGER_HELPER_SCRIPT" || -f "$IPLOGGER_LOGROTATE_CONF" ]]; then
         ask_confirmation "${YELLOW}IP Logger files exist. Overwrite?${NC}" overwrite_confirmed
         if ! $overwrite_confirmed; then echo "Aborting."; return 1; fi
     fi
@@ -161,6 +173,7 @@ ACCESS_LOG="${TRAFIK_LOG_DIR}/access.log"
 IP_LOG="${IP_LOG_FILE}"
 if [ ! -r "\${ACCESS_LOG}" ]; then exit 0; fi
 mkdir -p "$(dirname "\${IP_LOG}")"
+# Use jq to safely parse JSON and extract the client IP
 jq -r 'select(.ClientHost != null or .ClientAddr != null) | now | strftime("+%Y-%m-%d %H:%M:%S") + " " + (.ClientHost // .ClientAddr)' "\${ACCESS_LOG}" >> "\${IP_LOG}"
 EOF
     then echo -e "${RED}ERROR: Could not create helper script.${NC}" >&2; return 1; fi
@@ -177,7 +190,7 @@ Type=oneshot
 ExecStart=${IPLOGGER_HELPER_SCRIPT}
 User=root
 EOF
-    then echo -e "${RED}ERROR: Could not create service file.${NC}" >&2; return 1; fi
+    then echo -e "${RED}ERROR: Could not create service file '${service_file}'.${NC}" >&2; return 1; fi
     sudo chmod 644 "$service_file"
 
     # --- Timer File Content ---
@@ -191,7 +204,7 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 EOF
-    then echo -e "${RED}ERROR: Could not create timer file.${NC}" >&2; return 1; fi
+    then echo -e "${RED}ERROR: Could not create timer file '${timer_file}'.${NC}" >&2; return 1; fi
     sudo chmod 644 "$timer_file"
 
     # --- Logrotate Configuration ---
@@ -207,14 +220,14 @@ ${IP_LOG_FILE} {
     create 0640 root adm
 }
 EOF
-    then echo -e "${RED}ERROR: Could not create logrotate file.${NC}" >&2; return 1; fi
+    then echo -e "${RED}ERROR: Could not create logrotate file '${IPLOGGER_LOGROTATE_CONF}'.${NC}" >&2; return 1; fi
     sudo chmod 644 "$IPLOGGER_LOGROTATE_CONF"
 
     # --- Enable and Start Timer ---
     echo -e "${BLUE}Enabling and starting the timer...${NC}"
     sudo systemctl daemon-reload
     if ! sudo systemctl enable --now "${timer_file}"; then
-        echo -e "${RED}ERROR: Could not enable/start timer.${NC}" >&2; return 1
+        echo -e "${RED}ERROR: Could not enable/start timer '${timer_file}'.${NC}" >&2; return 1
     fi
 
     echo "--------------------------------------------------"
@@ -234,7 +247,7 @@ remove_ip_logging() {
     local timer_file="/etc/systemd/system/${IPLOGGER_SERVICE%.service}.timer"
     local remove_confirmed=false
 
-    if [[ ! -f "$service_file" && ! -f "$timer_file" ]]; then
+    if [[ ! -f "$service_file" && ! -f "$timer_file" && ! -f "$IPLOGGER_HELPER_SCRIPT" && ! -f "$IPLOGGER_LOGROTATE_CONF" ]]; then
         echo -e "${YELLOW}INFO: IP Logger files not found.${NC}"; return 0
     fi
 
