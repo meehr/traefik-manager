@@ -139,16 +139,8 @@ setup_ip_logging() {
     if ! ensure_dependency_installed "jq" "jq"; then return 1; fi
 
     local access_log_format
-    # CORRECTED: Robust awk command to find 'format: json' inside the 'accessLog:' block,
-    # ignoring comments and handling various spacings.
-    access_log_format=$(sudo awk '
-        /^accessLog:/ {in_block=1; next}
-        /^[a-zA-Z#]+:/ && !/^\s*#/ {if (in_block) in_block=0} # Exit block on next top-level key
-        in_block && /^\s*format:\s*json/ { # Match format line inside block, ignore comments
-            print "json";
-            exit; # Found it, stop processing
-        }
-    ' "${STATIC_CONFIG_FILE}" 2>/dev/null)
+    # CORRECTED: Replaced the complex awk block with the simple, user-verified one-liner.
+    access_log_format=$(sudo awk '/^[[:space:]]*accessLog:/ {flag=1; next} flag && /^[[:space:]]*format:/ {print $2; exit}' "${STATIC_CONFIG_FILE}")
 
     if [[ "$access_log_format" != "json" ]]; then
         echo -e "${RED}ERROR: Traefik Access Log Format is not set to 'json' in ${STATIC_CONFIG_FILE} (or could not be read)!${NC}" >&2
