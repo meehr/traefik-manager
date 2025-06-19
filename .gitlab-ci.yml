@@ -1,0 +1,21 @@
+stages:
+  - deploy
+
+push_to_github:
+  stage: deploy
+  variables:
+    # Sorgt dafür, dass die gesamte Git-Historie für den Job verfügbar ist
+    GIT_DEPTH: 0 
+  script:
+    # Hier konfigurieren wir den Remote-Zugang zu GitHub innerhalb des CI-Jobs
+    # Wichtig: Du musst vorher das GITHUB_ACCESS_TOKEN in den GitLab CI/CD-Variablen speichern!
+    - git remote add github "https://oauth2:${GITHUB_ACCESS_TOKEN}@github.com/meehr/traefik-manager.git"
+
+    # Wir pushen den aktuellen Stand des 'main'-Branches nach GitHub
+    # Die Option -o ci.skip ist eine gute Praxis, um Push-Schleifen zu vermeiden
+    - git push github "HEAD:main" -o ci.skip
+  rules:
+    # Dieser Job wird nur für den 'main'-Branch erstellt...
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      # ...und erfordert einen manuellen Start ("on demand") über die GitLab-Weboberfläche.
+      when: manual
