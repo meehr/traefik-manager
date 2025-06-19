@@ -1,7 +1,7 @@
 #!/bin/bash
 # ===============================================================================
 # Traefik Management Script - Main Controller
-# Version: 3.0 (Modular)
+# Version: 4.0 (Modular without GUI)
 # Author: Martin Ehrentraut
 # Unterstützt von: fbnlrz, Traefik Team, AI Assistants
 # Based on: Traefik Manager from fbnlrz (Thanks for the inspiration!)
