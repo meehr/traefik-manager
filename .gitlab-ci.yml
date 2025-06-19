@@ -3,6 +3,7 @@ stages:
 
 push_to_github:
   stage: deploy
+  image: alpine/git:latest
   variables:
     # Sorgt dafür, dass die gesamte Git-Historie für den Job verfügbar ist
     GIT_DEPTH: 0 
